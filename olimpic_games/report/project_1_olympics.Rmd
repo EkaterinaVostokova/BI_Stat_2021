@@ -1,0 +1,226 @@
+---
+title: "Project_1_Olympic"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library (dplyr)
+library (tidyr)
+```
+required libraries:
+library (dplyr)
+library (tidyr)
+
+Unzipping of files was done manually.
+
+## Task 1
+
+
+```{r all_files}
+
+all_files <- list.files (path = "../data/", pattern = "*.csv", full.names = TRUE)
+all_files
+df = lapply(all_files, function(i){
+  x  = read.csv(i)
+  x
+})
+df = do.call("rbind.data.frame", df)
+```
+The result is a dataset of 271115 observations of 15 variables.
+
+
+## Task 2
+```{r summary}
+summary (df)
+```
+```{r is.na}
+sum(is.na(df))
+```
+
+```{r age}
+df %>% filter (Age > 80)
+unique (df$Age)
+```
+There are 9 entries in which athlete's age is over 80. For now, I have decided to drop the most obvious mistake - 240 year.
+The others participated in art competitions, and I checked the participant of 84 years - he really was that age. 
+```{r age.na}
+df$Age[df$Age==240] <- NA
+```
+The same was done with height - 340 was excluded.
+```{r height}
+df$Height[df$Height==340] <- NA
+```
+With sex, "G" and "" were changed to be NAs. 
+```{r sex}
+df$Sex[df$Sex=="G"] <- NA
+```
+Weight of 7 was excluded as well. The next minimum was around 25, but it was a weight of a 14-year old female gymnast, so it would make sense. 
+```{r weight}
+df$Weight[df$Weight=="7"] <- NA
+```
+There were some typos in Games' names, so they were just corrected.
+```{r 2004_summer}
+df$Games[df$Games=="2004 Summe"] <- "2004 Summer"
+df$Games[df$Games=="2000 Su"] <- "2000 Summer"
+df$Games[df$Games==""] <- NA
+df$Medal[df$Medal==""] <- NA
+```
+In general, the method of looking for invalid values was using the "unique" command or looking at summaries. Then obvious typos or non-sense values were excluded. Still, it would be possible to miss some of the mistakes in columns such as "Team" which include a lot of unique values.
+
+## Task 3
+Age of the youngest male and female athletes at 1992 Olympics:
+```{r age_1992}
+df %>% filter (Games == "1992 Summer") %>% group_by(Sex) %>% slice(which.min(Age))
+```
+So it is 12 for a girl and 11 for a boy. 
+
+
+## Task 4
+Mean and sd for the Height variable for male and female athletes:
+```{r height_both}
+df %>% group_by(Sex) %>% summarise(mean = mean(Height, na.rm = T), sd = sd(Height, na.rm = T))
+```
+F: mean 168, sd = 8.80
+M: mean 179, sd = 9.36
+
+## Task 5
+Height for tennis female athletes at 2000 Olympics:
+```{r height_tennis}
+df %>% filter (Sex == "F") %>% filter (Games == "2000 Summer") %>% filter (Sport == "Tennis") %>% summarise(mean = round(mean(Height, na.rm = T), 1), sd = round(sd(Height, na.rm = T), 1))
+```
+
+
+## Task 6
+The heaviest athlete at 2006 Olympics:
+```{r heaviest}
+df %>% filter (Games == "2006 Winter") %>% slice(which.max(Weight)) %>% select (Sport)
+```
+He participated in Skeleton.
+
+
+## Task 7
+Women gold medals from 1980 to 2010
+```{r gold}
+df %>% filter (Year >= 1980 & Year <= 2010) %>% filter (Sex == "F") %>% summarise(
+  count = n(),
+  gold_count = sum(Medal == "Gold", na.rm = T)
+)
+```
+2249 gold medals. 
+
+
+## Task 8
+John Aalberg participated in Games:
+```{r john}
+df %>% filter (Name == "John Aalberg") %>% group_by(Year) %>% 
+  summarise(n = n())
+```
+4 events in 1992 and also 4 in 1994.
+
+
+## Task 9
+One athlete could participate in several events, so one athlete was only counted one time:
+```{r 15_25}
+df %>% filter (Games == "2008 Summer") %>% filter (Age >= 15 & Age < 25) %>% count(Name) %>% summarise(n = n())
+```
+For age group 15-25 there were 4783 athletes
+```{r 25-35}
+df %>% filter (Games == "2008 Summer") %>% filter (Age >= 25 & Age < 35) %>% count(Name) %>% summarise(n = n())
+```
+For age group 25-35 there were 5376 athletes
+```{r 35-45}
+df %>% filter (Games == "2008 Summer") %>% filter (Age >= 35 & Age < 45) %>% count(Name) %>% summarise(n = n())
+```
+For age group 35-45: 630 athletes
+```{r 45-55}
+df %>% filter (Games == "2008 Summer") %>% filter (Age >= 45 & Age < 55) %>% count(Name) %>% summarise(n = n())
+```
+For age group 45-55: 76 athletes.
+
+So the highest number of athletes (5376) is within 25-35 age range, the lowest (76) is for 45-55 age range.
+
+
+## Task 10
+
+Various sports at 2002 and 1994 Olympics:
+```{r olympics_2002}
+df %>% filter (Games == "2002 Winter") %>% count(Sport) %>% summarise(n = n())
+```
+```{r olympics_1994}
+df %>% filter (Games == "1994 Winter") %>% count(Sport) %>% summarise(n = n())
+```
+15 sports at 2002 Olympics and 12 at 1994 Olympics.
+
+
+## Task 11
+```{r winter_top}
+df %>% filter (Season == "Winter") %>% filter(!is.na(Medal))%>% group_by(Medal, NOC) %>% 
+  summarise(n = n()) %>% arrange(desc(n)) %>% group_by(Medal) %>% slice (1)
+```
+During winter Olympics, Finland has the most bronze medals, USA - most silver, Canada - most gold.
+```{r summer_top}
+df %>% filter (Season == "Summer") %>% filter(!is.na(Medal))%>% group_by(Medal, NOC) %>% 
+  summarise(n = n()) %>% arrange(desc(n)) %>% group_by(Medal) %>% slice (1)
+
+```
+During the summer Olympics, USA has the highest number of medals in each category
+
+## Task 12
+Z scores of height:
+```{r height_z_scores}
+df$Height_z_scores <- scale (df$Height)
+```
+
+
+## Task 13
+Additional task 
+
+
+## Task 14
+Compare height, weight and age of men of women. T test was used. There was no need to check the normality as the number of observations was huge. Also, Shapiro Wilk test has a limitation of 5000 observations as its upper border.
+```{r height_t}
+df_women_winter <- df %>% filter (Season == "Winter") %>% filter (Sex == "F")
+df_men_winter <- df %>% filter (Season == "Winter") %>% filter (Sex == "M")
+t.test(df_women_winter$Height, df_men_winter$Height)
+```
+t = -184.8, df = 29342, p-value < 2.2e-16
+
+```{r box_height}
+df_winter <- df %>% filter (Season == "Winter")
+boxplot(df_winter$Height ~ df_winter$Sex, main="Height in Men and Women", xlab="Sex: Female and Male", ylab="Height" )
+```
+The differences can be observed on boxplot. 
+```{r weight_t}
+t.test(df_women_winter$Weight, df_men_winter$Weight)
+```
+t = -187.85, df = 36296, p-value < 2.2e-16
+```{r box_weight}
+boxplot(df_winter$Weight ~ df_winter$Sex, main="Weight in Men and Women", xlab="Sex: Female and Male", ylab="Weight" )
+```
+
+```{r age_t}
+t.test(df_women_winter$Age, df_men_winter$Age)
+```
+t = -32.239, df = 29455, p-value < 2.2e-16
+```{r box_age}
+boxplot(df_winter$Age ~ df_winter$Sex, main="Age in Men and Women", xlab="Sex: Female and Male", ylab="Age" )
+```
+
+## Task 15
+Team and Medal - can they be related?
+
+```{r chisq}
+df_no_na <- df %>% filter(!is.na(Medal)) %>% filter(!is.na(Team))
+chisq.test(table(df_no_na$Team, df_no_na$Medal))
+```
+
+X-squared = 29627, df = 1500, p-value <
+2.2e-16
+
+
+
+## Conclusion
+
+In this project data on Olympic athletes was analyzed. After initial data extraction and pre-processing, exploratory data analysis was done. Statistical methods - such as t-test, chi-squared - were used to compare differences between samples. 
+
