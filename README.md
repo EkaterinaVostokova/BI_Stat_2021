@@ -1,2 +1,2 @@
 # BI_Stat_2021
-1. Olympic athletes data analysis project
+Olympic athletes data analysis project (more detailed readme file in Olimpic games folder)
